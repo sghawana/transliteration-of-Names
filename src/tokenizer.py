@@ -1,8 +1,8 @@
 import os
 import pickle
 import torch
-from torch.utils.data import TensorDataset, DataLoader
-from tok_utils import merge_ids, get_pair_counts, generate_merges
+from torch.utils.data import TensorDataset
+from tok_utils import merge_ids, generate_merges
 
 class Tokenizer:
     def __init__(self, device):
@@ -108,19 +108,17 @@ class Tokenizer:
 
 
 class TokenizerDataset(TensorDataset):
-    def __init__(self, data, src_tokenizer, tgt_tokenizer, src_padding=None, tgt_padding=None):
+    def __init__(self, data, src_tokenizer, tgt_tokenizer):
         self.data = data
         self.src_tokenizer = src_tokenizer
         self.tgt_tokenizer = tgt_tokenizer
-        self.src_padding = src_padding
-        self.tgt_padding = tgt_padding
 
     def collate(self, batch):
         x_batch = [ data[0] for data in batch ]
         y_batch = [ data[1] for data in batch ]
 
-        x_batch = self.src_tokenizer.batch_encode(x_batch, self.src_padding)
-        y_batch = self.tgt_tokenizer.batch_encode(y_batch, self.tgt_padding)
+        x_batch = self.src_tokenizer.batch_encode(x_batch)
+        y_batch = self.tgt_tokenizer.batch_encode(y_batch)
 
         return x_batch, y_batch
 
