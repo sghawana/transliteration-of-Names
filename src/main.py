@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import os
+import pickle
 
 from rnn import RNNEncoderDecoderLM, RNNEncoderDecoderTrainer
 from tokenizer import Tokenizer
@@ -32,38 +33,63 @@ print(f"Length of training data: {len(train_data)}\nLength of validation data: {
 
 ## -------------------Build Tokenizer-------------->
 
-SRC_VOCAB_SIZE = 1000
-TRG_VOCAB_SIZE = 3000
+SRC_VOCAB_SIZE = 300
+TRG_VOCAB_SIZE = 300
 
-SRC_TOK_PATH = f'../models'
-TRG_TOK_PATH = f'../models'
+SRC_TOK_PATH = f'../tokenizer'
+TRG_TOK_PATH = f'../tokenizer'
 
 
 src_tokenizer = None
-tgt_tokenizer = None
+trg_tokenizer = None
 
 
 if os.path.exists(os.path.join(SRC_TOK_PATH, f'srctok{SRC_VOCAB_SIZE}.pkl')):
     print('Loading Source Tokenizer')
     src_tokenizer = Tokenizer.load(os.path.join(SRC_TOK_PATH, f'srctok{SRC_VOCAB_SIZE}.pkl'))
 else:
+    
     print('Training Source Tokenizer')
     src_tokenizer = Tokenizer(DEVICE)
     src_tokenizer.train(list(train_data['Name']), SRC_VOCAB_SIZE)
+    
     src_tokenizer.save(SRC_TOK_PATH, f'srctok{SRC_VOCAB_SIZE}')
+    
+    src_vocab_path = os.path.join(SRC_TOK_PATH, f'srcvocab{SRC_VOCAB_SIZE}.txt')
+    with open(src_vocab_path, 'w') as vocab_file:
+        for idx, byte in src_tokenizer.vocab.items():
+            vocab_file.write(f"{idx}: {byte.decode('utf-8', errors='ignore')}\n") 
+    
+    src_merges_path = os.path.join(SRC_TOK_PATH, f'srcmerges{SRC_VOCAB_SIZE}.txt')
+    with open(src_merges_path, 'w') as merges_file:
+        for idx, pair in src_tokenizer.merges.items() or []:  
+            merges_file.write(f"{idx}: {pair}\n")
+    
     print('Source Tokenizer Training Complete and Saved')
 
 
 if os.path.exists(os.path.join(TRG_TOK_PATH, f'trgtok{TRG_VOCAB_SIZE}.pkl')):
     print('Loading Target Tokenizer')
-    tgt_tokenizer = Tokenizer.load(os.path.join(TRG_TOK_PATH, f'trgtok{TRG_VOCAB_SIZE}.pkl'))
+    trg_tokenizer = Tokenizer.load(os.path.join(TRG_TOK_PATH, f'trgtok{TRG_VOCAB_SIZE}.pkl'))
 else:
+    
     print('Training Target Tokenizer')
-    tgt_tokenizer = Tokenizer(DEVICE)
-    tgt_tokenizer.train(list(train_data['Translation']), TRG_VOCAB_SIZE)
-    tgt_tokenizer.save(TRG_TOK_PATH, f'trgtok{TRG_VOCAB_SIZE}')
+    trg_tokenizer = Tokenizer(DEVICE)
+    trg_tokenizer.train(list(train_data['Translation']), TRG_VOCAB_SIZE)
+    
+    trg_tokenizer.save(TRG_TOK_PATH, f'trgtok{TRG_VOCAB_SIZE}')
+    
+    trg_vocab_path = os.path.join(TRG_TOK_PATH, f'trgvocab{TRG_VOCAB_SIZE}.txt')
+    with open(trg_vocab_path, 'w') as vocab_file:
+        for idx, byte in trg_tokenizer.vocab.items():
+            vocab_file.write(f"{idx}: {byte.decode('utf-8', errors='ignore')}\n") 
+    
+    trg_merges_path = os.path.join(TRG_TOK_PATH, f'trgmerges{TRG_VOCAB_SIZE}.txt')
+    with open(trg_merges_path, 'w') as merges_file:
+        for idx, pair in trg_tokenizer.merges.items() or []:  
+            merges_file.write(f"{idx}: {pair}\n")
+    
     print('Target Tokenizer Training Complete and Saved')
 
 
-## ----------------------- RNN Training----------------->
 

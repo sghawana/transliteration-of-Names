@@ -13,6 +13,7 @@ def get_pair_counts(ids: torch.Tensor) -> dict[tuple[int, int], int]:
             pair_counts[pair] = 1
     return pair_counts
 
+
 def merge_ids(ids: torch.Tensor, pair: tuple[int, int], idx: int) -> torch.Tensor:
     new_ids = []
     i = 0
@@ -24,26 +25,6 @@ def merge_ids(ids: torch.Tensor, pair: tuple[int, int], idx: int) -> torch.Tenso
             new_ids.append(ids[i].item())
             i += 1
     return torch.tensor(new_ids, dtype=ids.dtype, device=ids.device)
-
-
-# def generate_merges(ids: torch.Tensor, num_merges: int) -> dict[tuple[int, int], int]:
-#     merges = {}
-#     i = 256
-#     count = 0
-#     pair_count = get_pair_counts(ids)
-#     max_heap = [(-count, pair) for pair, count in pair_count.items()]
-#     heapq.heapify(max_heap) 
-#     while count < num_merges and max_heap:
-#         _, merge_pair = heapq.heappop(max_heap)
-#         merge_pair = tuple(merge_pair)
-#         ids = merge_ids(ids, merge_pair, i)
-#         merges[merge_pair] = i
-#         i += 1
-#         count += 1
-#         pair_count = get_pair_counts(ids)
-#         max_heap = [(-count, pair) for pair, count in pair_count.items()]
-#         heapq.heapify(max_heap)
-#     return merges
 
 
 def generate_merges(ids: torch.Tensor, num_merges: int) -> dict[tuple[int, int], int]:

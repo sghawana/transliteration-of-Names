@@ -104,10 +104,25 @@ class Tokenizer:
     
 if __name__ == '__main__':
     
-    srctok = Tokenizer.load('../models/srctok1000.pkl')
-    trgtok = Tokenizer.load('../models/trgtok3000.pkl')
+    srctok_path = '../tokenizer/srctok300.pkl'
+    trgtok_path = '../tokenizer/trgtok300.pkl'
 
-    a = srctok.encode('to your loved ones in language')
+    srctok = None
+    trgtok = None
+
+    if os.path.exists(srctok_path):
+        srctok = Tokenizer.load(srctok_path)
+        print("Loaded srctok from", srctok_path)
+    else:
+        print(f"{srctok_path} does not exist")
+
+    if os.path.exists(trgtok_path):
+        trgtok = Tokenizer.load(trgtok_path)
+        print("Loaded trgtok from", trgtok_path)
+    else:
+        print(f"{trgtok_path} does not exist")
+
+    a = srctok.encode('any message to your loved ones in language')
     b = trgtok.encode('भाषा में किसी अपने को कोई मैसेज')
     print(f'English: {a}\n')
     print(f'Length of English: {len(a)}\n')
@@ -118,4 +133,9 @@ if __name__ == '__main__':
     print(f'UTF Hindi: {c}\n')
     print(f'Length of UTF Hindi: {len(c)}\n')
     
+    #print(trgtok.decode(torch.tensor([3001, 2013, 3002])))
+    
+    print(trgtok.decode(trgtok.encode('साहिन')))
+    print(trgtok.encode('साहिन'))
+    print(list('साहिन'.encode('utf-8')))
     
