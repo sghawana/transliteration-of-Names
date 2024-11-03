@@ -2,6 +2,7 @@ import os
 import pickle
 import torch
 from torch.utils.data import TensorDataset
+from tqdm import tqdm
 from tok_utils import merge_ids, generate_merges
 
 class Tokenizer:
@@ -15,17 +16,12 @@ class Tokenizer:
         
     @classmethod
     def load(cls, path):
-        tokenizer_file = os.path.join(path, "tokenizer.pkl")
-
-        if not os.path.exists(path) or not os.path.exists(os.path.join(path, "tokenizer.pkl")):
-            raise ValueError(cls.load.__name__ + ": No tokenizer found at the specified directory")
-
-        with open(tokenizer_file, "rb") as ifile:
+        with open(path, "rb") as ifile:
             return pickle.load(ifile)
 
-    def save(self, path):
+    def save(self, path, name='tokenizer'):
         os.makedirs(path, exist_ok=True)
-        with open(os.path.join(path, "tokenizer.pkl"), 'wb') as ofile:
+        with open(os.path.join(path, f"{name}.pkl"), 'wb') as ofile:
             pickle.dump(self, ofile)
 
     def train(self, names: list[str], vocab_size) -> None: 
@@ -34,7 +30,7 @@ class Tokenizer:
 
         num_merges = max(0, vocab_size - 256)
         self.merges = generate_merges(ids, num_merges)
-        for pair, new_idx in self.merges.items():
+        for pair, new_idx in tqdm(self.merges.items(), desc='Generating Vocab'):
             self.vocab[new_idx] = self.vocab[pair[0]] + self.vocab[pair[1]]
         self.isTrain = True
         
@@ -83,7 +79,7 @@ class Tokenizer:
         return byte_sequence.decode('utf-8', errors='replace')
 
 
-    def batch_encode(self, batch: list[str], use_sos=True, use_eos=True):
+    def batch_encode(self, batch: list[str], use_sos=True, use_eos=True) -> torch.Tensor:
         encoded_batch = []
         for string in batch:
             encoded = self.encode(string, use_sos=use_sos, use_eos=use_eos)
@@ -97,36 +93,29 @@ class Tokenizer:
         return padded_batch
         
 
-    def batch_decode(self, batch: torch.Tensor, strip_special: bool = True):
+    def batch_decode(self, batch: torch.Tensor, strip_special: bool = True) -> list[str]:
         decoded_batch = []
         for sequence in batch:
             decoded = self.decode(sequence, strip_special=strip_special)
             decoded_batch.append(decoded)
         return decoded_batch
 
+    
+    
+if __name__ == '__main__':
+    
+    srctok = Tokenizer.load('../models/srctok1000.pkl')
+    trgtok = Tokenizer.load('../models/trgtok3000.pkl')
 
-
-
-class TokenizerDataset(TensorDataset):
-    def __init__(self, data, src_tokenizer, tgt_tokenizer):
-        self.data = data
-        self.src_tokenizer = src_tokenizer
-        self.tgt_tokenizer = tgt_tokenizer
-
-    def collate(self, batch):
-        x_batch = [ data[0] for data in batch ]
-        y_batch = [ data[1] for data in batch ]
-
-        x_batch = self.src_tokenizer.batch_encode(x_batch)
-        y_batch = self.tgt_tokenizer.batch_encode(y_batch)
-
-        return x_batch, y_batch
-
-    def __getitem__(self, index):
-        return (
-            self.data['Name'][index],
-            self.data['Translation'][index]
-        )
-
-    def __len__(self):
-        return len(self.data)
+    a = srctok.encode('to your loved ones in language')
+    b = trgtok.encode('भाषा में किसी अपने को कोई मैसेज')
+    print(f'English: {a}\n')
+    print(f'Length of English: {len(a)}\n')
+    print(f'Hindi: {b}\n') 
+    print(f'Length of Hindi: {len(b)}\n')
+    
+    c = torch.tensor(list('भाषा में किसी अपने को कोई मैसेज'.encode('utf-8')))
+    print(f'UTF Hindi: {c}\n')
+    print(f'Length of UTF Hindi: {len(c)}\n')
+    
+    

@@ -3,6 +3,9 @@ import requests
 import subprocess
 import matplotlib
 import pandas as pd
+from torch.utils.data import Dataset, DataLoader
+
+from tokenizer import*
 
 
 def preprocess():
@@ -30,9 +33,64 @@ def load_data(train_url, valid_url, train_file, valid_file):
     print(f'Validation data saved to {valid_file}')
 
 
-def read_dataframe(ds_type):
-    df = pd.read_csv(f"data/data.{ds_type}.csv", header=0)
+def read_dataframe(ds_type, path):
+    df = pd.read_csv(f"{path}/data.{ds_type}.csv", header=0)
     df = df[~df.isna()]
     df['Name'] = df['Name'].astype(str)
     df['Translation'] = df['Translation'].astype(str)
     return df
+
+
+class Names(Dataset):
+    def __init__(self, data, src_tokenizer, tgt_tokenizer):
+        super(Names, self).__init__()
+        
+        self.data = data
+        self.src_tokenizer = src_tokenizer
+        self.tgt_tokenizer = tgt_tokenizer
+        
+    def transform(self, name, translation):
+        return srctok.encode(name), trgtok.encode(translation)
+    
+    def collate(self, batch):
+        pass
+
+    def __getitem__(self, index):
+        return  self.transform(self.data['Name'][index],
+                               self.data['Translation'][index])
+    
+    def __len__(self):
+        return len(self.data)
+
+
+if __name__ == '__main__':
+    
+    srctok = Tokenizer.load('../models/srctok1000.pkl')
+    trgtok = Tokenizer.load('../models/trgtok3000.pkl')
+    
+    DATA_FOLDER_PATH = '../data'
+    
+    train_file = f'{DATA_FOLDER_PATH}/data.train.csv'
+    valid_file = f'{DATA_FOLDER_PATH}/data.valid.csv'
+
+    train_url = "https://docs.google.com/spreadsheets/d/1JpK9nOuZ2ctMrjNL-C0ghUQ4TesTrMER1-dTD_torAA/gviz/tq?tqx=out:csv&sheet=data.train.csv"
+    valid_url = "https://docs.google.com/spreadsheets/d/1cKC0WpWpIQJkaqnFb7Ou7d0syFDsj6eEW7bM7GH3u2k/gviz/tq?tqx=out:csv&sheet=data.valid.csv"
+
+    load_data(train_url, valid_url, train_file, valid_file)
+
+    train_df      = read_dataframe("train", DATA_FOLDER_PATH)
+    valid_df= read_dataframe("valid", DATA_FOLDER_PATH)
+    
+    
+    train_dataset = Names(train_df, srctok, trgtok)
+    valid_dataset = Names(valid_df, srctok, trgtok)
+    
+    train_dataloader = DataLoader(train_dataset, batch_size=20, shuffle=True)
+    valid_dataLoader = DataLoader(valid_dataset, batch_size=20, shuffle=False)
+    
+    
+    count = 0
+    for _ in train_dataloader:
+        count += 1
+    print(count)
+    print(len(train_df))
