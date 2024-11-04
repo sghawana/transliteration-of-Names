@@ -1,8 +1,6 @@
 import torch
 import torch.nn as nn
 from trainer import Trainer
-from torch.utils.data import DataLoader
-
 
 class RNNEncoderDecoderLM(torch.nn.Module):
     def __init__(self, src_vocab_size, tgt_vocab_size, embd_dims,

@@ -45,7 +45,8 @@ class Tokenizer:
         self.isTrain = True
       
     def encode(self, string, use_sos=True, use_eos=True, seq_len=None) -> torch.Tensor: 
-        if self.isTrain == False: print('Warning: Tokenizer is not Trained!!!')        
+        if self.isTrain == False: print('Warning: Tokenizer is not Trained!!!')      
+        string = string.strip()  
         ids = torch.tensor(list(string.encode("utf-8", errors='replace')), dtype=torch.int32, device=self.device)
         for pair, target in self.merges.items():
             ids = merge_ids(ids, pair, target)
@@ -104,6 +105,7 @@ class Tokenizer:
     
 if __name__ == '__main__':
     
+    # set tokenizer path if not available train from main
     srctok_path = '../tokenizer/srctok300.pkl'
     trgtok_path = '../tokenizer/trgtok300.pkl'
 
@@ -132,10 +134,16 @@ if __name__ == '__main__':
     c = torch.tensor(list('भाषा में किसी अपने को कोई मैसेज'.encode('utf-8')))
     print(f'UTF Hindi: {c}\n')
     print(f'Length of UTF Hindi: {len(c)}\n')
+        
+    print('Name: ', trgtok.decode(trgtok.encode('इंद्र')))
+    b1 = 'इंद्र'.encode('utf-8')
+    b2 = bytes()
+    for token in trgtok.encode('इंद्र')[1:-1]: 
+        b2 += trgtok.vocab[token.item()]
+
+    print("\nOriginal bytes (b1): ", b1)
+    print("Reconstructed bytes (b2): ", b2)
+    print("Are they equal?: ", b1 == b2)
     
-    #print(trgtok.decode(torch.tensor([3001, 2013, 3002])))
     
-    print(trgtok.decode(trgtok.encode('साहिन')))
-    print(trgtok.encode('साहिन'))
-    print(list('साहिन'.encode('utf-8')))
     

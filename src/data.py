@@ -4,6 +4,7 @@ import subprocess
 import matplotlib
 import pandas as pd
 import torch.utils
+import torch.utils
 from torch.utils.data import Dataset, DataLoader
 
 from tokenizer import*
@@ -62,22 +63,22 @@ class Names(Dataset):
     
 
 def collate_f(batch):
-    
     name_list = []
     trans_list = []
-    
     for names, trans in batch:
         name_list.append(names)
         trans_list.append(trans)
 
-    return (torch.nn.utils.rnn.pad_sequence(names),
-            torch.nn.utils.rnn.pad_sequence(trans))
-
-
+    name_tensor = torch.nn.utils.rnn.pad_sequence(name_list, batch_first=True)
+    trans_tensor = torch.nn.utils.rnn.pad_sequence(trans_list, batch_first=True)
+    new_batch = list(zip(name_tensor, trans_tensor))
+    return new_batch
+        
+          
 if __name__ == '__main__':
     
-    srctok = Tokenizer.load('../models/srctok1000.pkl')
-    trgtok = Tokenizer.load('../models/trgtok3000.pkl')
+    srctok = Tokenizer.load('../tokenizer/srctok300.pkl')
+    trgtok = Tokenizer.load('../tokenizer/trgtok300.pkl')
     
     DATA_FOLDER_PATH = '../data'
     
@@ -96,14 +97,11 @@ if __name__ == '__main__':
     train_dataset = Names(train_df, srctok, trgtok)
     valid_dataset = Names(valid_df, srctok, trgtok)
     
+    print('\nBuilding Train Dataloader')
     train_dataloader = DataLoader(train_dataset, batch_size=20, shuffle=True,
                                   collate_fn=collate_f)
+    print('\nBuilding Valid Dataloader')
     valid_dataLoader = DataLoader(valid_dataset, batch_size=20, shuffle=False,
                                   collate_fn=collate_f)
+    print('\nDataloader Created')
     
-    
-    count = 0
-    for _ in train_dataloader:
-        count += 1
-    print(count)
-    print(len(train_df))

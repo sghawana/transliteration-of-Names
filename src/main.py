@@ -1,20 +1,32 @@
 import torch
 import torch.nn as nn
+from torch.utils.data import Dataset, DataLoader
+
 import os
 import pickle
 
 from rnn import RNNEncoderDecoderLM, RNNEncoderDecoderTrainer
 from tokenizer import Tokenizer
-from data import load_data, read_dataframe
+from data import load_data, read_dataframe, collate_f, preprocess, Names
+
 
 DEVICE = torch.device('cuda') 
+
+## -----------------Hyper Parameters----------------->
 
 torch.manual_seed(42)
 
 DATA_FOLDER_PATH = '../data'
 
+SRC_VOCAB_SIZE = 300
+TRG_VOCAB_SIZE = 300
+
+SRC_TOK_PATH = f'../tokenizer'
+TRG_TOK_PATH = f'../tokenizer'
+
 
 ## -----------------Loading Data----------------->
+preprocess()
 
 train_file = f'{DATA_FOLDER_PATH}/data.train.csv'
 valid_file = f'{DATA_FOLDER_PATH}/data.valid.csv'
@@ -24,25 +36,16 @@ valid_url = "https://docs.google.com/spreadsheets/d/1cKC0WpWpIQJkaqnFb7Ou7d0syFD
 
 load_data(train_url, valid_url, train_file, valid_file)
 
-train_data      = read_dataframe("train", DATA_FOLDER_PATH)
-validation_data = read_dataframe("valid", DATA_FOLDER_PATH)
+train_df      = read_dataframe("train", DATA_FOLDER_PATH)
+valid_df = read_dataframe("valid", DATA_FOLDER_PATH)
 
-print(f"Length of training data: {len(train_data)}\nLength of validation data: {len(validation_data)}")
-
+print(f"Length of training data: {len(train_df)}\nLength of validation data: {len(valid_df)}")
 
 
 ## -------------------Build Tokenizer-------------->
 
-SRC_VOCAB_SIZE = 300
-TRG_VOCAB_SIZE = 300
-
-SRC_TOK_PATH = f'../tokenizer'
-TRG_TOK_PATH = f'../tokenizer'
-
-
 src_tokenizer = None
 trg_tokenizer = None
-
 
 if os.path.exists(os.path.join(SRC_TOK_PATH, f'srctok{SRC_VOCAB_SIZE}.pkl')):
     print('Loading Source Tokenizer')
@@ -51,7 +54,7 @@ else:
     
     print('Training Source Tokenizer')
     src_tokenizer = Tokenizer(DEVICE)
-    src_tokenizer.train(list(train_data['Name']), SRC_VOCAB_SIZE)
+    src_tokenizer.train(list(train_df['Name']), SRC_VOCAB_SIZE)
     
     src_tokenizer.save(SRC_TOK_PATH, f'srctok{SRC_VOCAB_SIZE}')
     
@@ -75,7 +78,7 @@ else:
     
     print('Training Target Tokenizer')
     trg_tokenizer = Tokenizer(DEVICE)
-    trg_tokenizer.train(list(train_data['Translation']), TRG_VOCAB_SIZE)
+    trg_tokenizer.train(list(train_df['Translation']), TRG_VOCAB_SIZE)
     
     trg_tokenizer.save(TRG_TOK_PATH, f'trgtok{TRG_VOCAB_SIZE}')
     
@@ -86,10 +89,24 @@ else:
     
     trg_merges_path = os.path.join(TRG_TOK_PATH, f'trgmerges{TRG_VOCAB_SIZE}.txt')
     with open(trg_merges_path, 'w') as merges_file:
-        for idx, pair in trg_tokenizer.merges.items() or []:  
-            merges_file.write(f"{idx}: {pair}\n")
+        for pair, idx in trg_tokenizer.merges.items() or []:  
+            merges_file.write(f"{pair}: {idx}\n")
     
     print('Target Tokenizer Training Complete and Saved')
 
 
+## -------------------Dataset and Dataloader-------------->
 
+train_dataset = Names(train_df, src_tokenizer, trg_tokenizer)
+valid_dataset = Names(valid_df, src_tokenizer, trg_tokenizer)
+
+print('\nBuilding Train Dataloader')
+train_dataloader = DataLoader(train_dataset, batch_size=20, shuffle=True,
+                                collate_fn=collate_f)
+print('Building Valid Dataloader')
+valid_dataLoader = DataLoader(valid_dataset, batch_size=20, shuffle=False,
+                                collate_fn=collate_f)
+print('Dataloader Created')
+
+
+## -------------------Model Training-------------->
